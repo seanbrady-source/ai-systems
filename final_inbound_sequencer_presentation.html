@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Inbound Architect | Strategic Proposal</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom Chart Container Styles */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .progress-bar-fill { transition: width 1s ease-in-out; }
+        
+        /* Hide Scrollbar for clean UI in simulator */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Slide Transitions */
+        .slide-content { height: 100%; width: 100%; }
+        
+        /* Editor Styles */
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: #0077CC;
+            box-shadow: 0 0 0 2px rgba(0, 119, 204, 0.1);
+        }
+    </style>
+    
+    <!-- Chosen Palette: Slate (Background), Elastic Blue (Primary), Yellow/Amber (Accent) -->
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Navigation / Header -->
+    <nav class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center z-50 shadow-sm shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-[#0077CC] text-white p-2 rounded-lg"> <!-- Elastic Blue -->
+                <i data-lucide="bot" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight tracking-tight">The Inbound Architect</h1>
+                <p class="text-xs text-slate-500 font-mono">SALES TECH PROPOSAL // DRAFT v2</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- Progress Dots -->
+            <div id="nav-dots" class="flex gap-1.5 mr-4"></div>
+            
+            <button onclick="prevSlide()" id="btn-prev" class="p-2 rounded-full hover:bg-slate-100 disabled:opacity-30 transition text-slate-600">
+                <i data-lucide="chevron-left" class="w-6 h-6"></i>
+            </button>
+            <button onclick="nextSlide()" id="btn-next" class="bg-slate-900 text-white px-5 py-2.5 rounded-full hover:bg-slate-800 disabled:opacity-50 transition flex items-center gap-2 text-sm font-bold shadow-lg shadow-slate-200">
+                Next <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="app-container" class="flex-grow relative w-full h-full overflow-hidden bg-slate-50">
+        <!-- Slides will be injected here -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="absolute bottom-4 left-0 right-0 text-center pointer-events-none z-0">
+        <span class="bg-slate-200/50 text-slate-400 px-3 py-1 rounded-full text-[10px] font-mono uppercase tracking-widest backdrop-blur-sm">
+            Confidential - Internal Use Only
+        </span>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- State Management ---
+        const state = {
+            currentSlide: 0,
+            slides: [
+                'title', 'problem', 'solution', 'architecture', 'madlib', 'stylebot', 'impact', 'simulator'
+            ],
+            simulator: {
+                step: 0, // 0: Idle, 1: Data, 2: Info, 3: Knowledge, 4: Wisdom, 5: Done
+                selectedLeadId: null,
+                generatedSequence: null // Array of emails
+            }
+        };
+
+        // --- Mock Data (Strictly mapped to User CSVs) ---
+        const MOCK_LEADS = [
+            {
+                id: 1,
+                name: "Sarah Jenkins",
+                title: "SOC Director",
+                company: "Global Finance Corp",
+                industry: "Automotive", 
+                intentScore: 92,
+                intentTopics: ["SIEM Migration", "Threat Hunting"],
+                source: "Sumble (High Intent)",
+                persona: "Security",
+                pain: "Alert fatigue and false positives", 
+                story_match: { company: "BMW", metric: "reduced false monitoring alerts by 95%", btl_quote: "Eliminating alert noise allows security teams to focus exclusively on true threats." },
+                secondary_story: { company: "Airbus", metric: "reduced incident investigation time by 75%" },
+                resource: { title: "Elastic Security for SIEM", link: "https://www.elastic.co/training#security" }
+            },
+            {
+                id: 2,
+                name: "David Chen",
+                title: "SRE Lead",
+                company: "TechFlow Logistics",
+                industry: "Telecommunications", 
+                intentScore: 85,
+                intentTopics: ["Log Management", "K8s Monitoring"],
+                source: "TechTarget",
+                persona: "Observability",
+                pain: "Tool sprawl / high TCO", 
+                story_match: { company: "Comcast", metric: "reduced troubleshooting time by 75%", btl_quote: "The consolidation eliminated the need for engineers to manually switch between tools." },
+                secondary_story: { company: "KPN", metric: "increased release speed by 4x" },
+                resource: { title: "Observability Overview", link: "https://www.elastic.co/demo-gallery/observability-overview" }
+            },
+            {
+                id: 3,
+                name: "Elena Rodriguez",
+                title: "CIO / Exec Sponsor",
+                company: "Retail 360",
+                industry: "Telecommunications", 
+                intentScore: 78,
+                intentTopics: ["GenAI", "Search Relevance"],
+                source: "Demandbase",
+                persona: "Search",
+                pain: "Strategic Uncertainty ('how to start')", 
+                story_match: { company: "Oi", metric: "improved search latency 4x", btl_quote: "Faster, more accurate search leads to reduced call center load." },
+                secondary_story: { company: "Jaguar Land Rover", metric: "reduced time-to-market for connected features by 50%" },
+                resource: { title: "Build a chatbot RAG app", link: "https://www.elastic.co/getting-started/enterprise-search/build-chatbot-rag-app" }
+            }
+        ];
+
+        // --- Ara's Strategic Outreach Sequence Logic ---
+        function generateSequence(lead) {
+            const firstName = lead.name.split(" ")[0];
+            
+            return [
+                {
+                    day: "Day 1",
+                    type: "The Hook",
+                    subject: `elastic for ${lead.company}`,
+                    body: `Hi ${firstName},\n\nI'm part of the direct team helping ${lead.company} with Elastic.\n\nTypically, ${lead.title}s in ${lead.industry} tell us they are wrestling with ${lead.pain}.\n\nFor example, ${lead.story_match.company} used Elastic to ${lead.story_match.metric}.\n\nLet me know if any of this catches your eye. Would love to have a broader conversation.`
+                },
+                {
+                    day: "Day 3",
+                    type: "The Nudge",
+                    subject: `Re: elastic for ${lead.company}`,
+                    body: `Thoughts on the above, ${firstName}?\n\nFYI, if anything did catch your eye, here is my booking link: {{sender.calendar_url}}`
+                },
+                {
+                    day: "Day 5",
+                    type: "The Pivot to Value",
+                    subject: `Re: elastic for ${lead.company}`,
+                    body: `Hi ${firstName},\n\nMoving on for now, but wanted to share one last thought. Even if ${lead.pain} isn't the focus, many teams use us to drive efficiency.\n\n${lead.secondary_story.company} actually ${lead.secondary_story.metric} by unifying their data.\n\nHere is a guide that explains the architecture: ${lead.resource.title} (${lead.resource.link}).`
+                },
+                {
+                    day: "Day 15",
+                    type: "The High-Value Offer",
+                    subject: `elastic demo for ${lead.company}`,
+                    body: `Hi ${firstName},\n\nIf you are evaluating options to solve for ${lead.pain}, seeing is usually believing.\n\nHere is a hands-on click-through demo that shows exactly how we handle this: ${lead.resource.link}\n\nHope this helps your research.`
+                },
+                {
+                    day: "Day 32",
+                    type: "The Professional Close-Out",
+                    subject: `architecture review?`,
+                    body: `Hi ${firstName},\n\nMaybe ${lead.pain} isn't the priority right now. We've released new features like AI Automation that optimize environments like yours.\n\nOpen to an overall architecture review to see where we can optimize your current setup?`
+                }
+            ];
+        }
+
+        // --- Render Functions ---
+
+        function renderSlide() {
+            const container = document.getElementById('app-container');
+            const slideId = state.slides[state.currentSlide];
+            
+            // Clean up old charts
+            const oldChart = Chart.getChart("problemChart");
+            if (oldChart) oldChart.destroy();
+
+            let html = '';
+
+            switch(slideId) {
+                case 'title':
+                    html = `
+                        <div class="h-full flex flex-col items-center justify-center text-center px-4 fade-in bg-gradient-to-br from-slate-50 to-blue-50/50">
+                            <div class="bg-white p-8 rounded-2xl shadow-xl mb-8 border border-slate-100">
+                                <i data-lucide="layers" class="w-24 h-24 text-[#0077CC]"></i>
+                            </div>
+                            <h1 class="text-6xl font-extrabold text-slate-900 mb-6 max-w-4xl tracking-tight">The Inbound Architect</h1>
+                            <h2 class="text-2xl text-slate-500 max-w-2xl mb-12 font-light">Scaling SDR Precision with Automated, Best-Practice Sequences</h2>
+                            
+                            <div class="grid grid-cols-2 gap-8 text-left max-w-2xl w-full bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Current State</span>
+                                    <p class="text-red-500 font-medium">Manual Research (20 mins/lead)</p>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Future State</span>
+                                    <p class="text-green-600 font-bold">Automated Drafts (Instant)</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'problem':
+                    html = `
+                        <div class="h-full flex flex-col px-8 py-8 fade-in max-w-7xl mx-auto w-full justify-center">
+                            <div class="mb-8 text-center">
+                                <h2 class="text-4xl font-bold text-slate-900 mb-2">The "Bandwidth Tax"</h2>
+                                <p class="text-slate-500 text-xl">We have the data. But accessing it costs too much time.</p>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center h-full max-h-[60vh]">
+                                <div class="bg-white p-8 rounded-2xl shadow-lg border border-slate-200 relative">
+                                    <div class="absolute -top-4 left-6 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">THE PROBLEM</div>
+                                    <h3 class="font-bold text-lg mb-6 text-center text-slate-700">SDR Time Allocation</h3>
+                                    <div class="chart-container">
+                                        <canvas id="problemChart"></canvas>
+                                    </div>
+                                    <div class="mt-6 text-center text-sm text-slate-400 font-medium">
+                                        Manual synthesis kills volume.
+                                    </div>
+                                </div>
+                                <div class="space-y-6">
+                                    <div class="bg-slate-100 p-8 rounded-2xl border-l-8 border-slate-400">
+                                        <h4 class="font-bold text-slate-800 text-lg mb-4 flex items-center gap-2">
+                                            <i data-lucide="search" class="w-5 h-5"></i> The Research Burden
+                                        </h4>
+                                        <p class="text-slate-600 mb-4">To write <strong>one</strong> quality email, an SDR must check:</p>
+                                        <ul class="text-slate-600 space-y-3 text-sm font-medium">
+                                            <li class="flex items-center gap-3 bg-white p-3 rounded shadow-sm"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Sumble (Intent Data)</li>
+                                            <li class="flex items-center gap-3 bg-white p-3 rounded shadow-sm"><span class="w-2 h-2 rounded-full bg-orange-500"></span> Demandbase (Account Surges)</li>
+                                            <li class="flex items-center gap-3 bg-white p-3 rounded shadow-sm"><span class="w-2 h-2 rounded-full bg-green-500"></span> TechTarget (Activity)</li>
+                                            <li class="flex items-center gap-3 bg-white p-3 rounded shadow-sm"><span class="w-2 h-2 rounded-full bg-blue-700"></span> Sales Navigator (Context)</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="bg-red-50 p-6 rounded-2xl border-l-8 border-red-400">
+                                        <h4 class="font-bold text-red-800 text-lg mb-2">The Result</h4>
+                                        <p class="text-red-700 leading-relaxed">
+                                            SDRs face a trade off. 10 perfect sequences a day, or 100 generic sequences. Neither will help ensure we hit our growth targets.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'solution':
+                    html = `
+                        <div class="h-full flex flex-col px-8 py-8 fade-in max-w-7xl mx-auto w-full justify-center">
+                            <div class="mb-16 text-center">
+                                <h2 class="text-4xl font-bold text-slate-900">The Solution: Next Best Sequence</h2>
+                                <p class="text-slate-500 text-xl mt-2">Moving from "Prompting Action" to "Drafting Execution"</p>
+                            </div>
+
+                            <div class="flex items-center justify-center gap-6 w-full relative">
+                                <!-- Connection Line -->
+                                <div class="absolute top-1/2 left-20 right-20 h-0.5 bg-slate-200 -z-10"></div>
+
+                                <!-- Step 1 -->
+                                <div class="w-64 bg-white p-8 rounded-2xl shadow-md border border-slate-200 text-center relative group hover:-translate-y-1 transition duration-300">
+                                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-100 text-slate-500 px-4 py-1 rounded-full text-xs font-bold border border-slate-200">INPUT</div>
+                                    <div class="bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-blue-100 transition">
+                                        <i data-lucide="user-plus" class="w-8 h-8 text-[#0077CC]"></i>
+                                    </div>
+                                    <h3 class="font-bold text-slate-800 text-lg">Lead Arrives</h3>
+                                    <p class="text-xs text-slate-500 mt-2 font-mono">Salesforce Inbound</p>
+                                </div>
+                                
+                                <i data-lucide="arrow-right" class="w-8 h-8 text-slate-400"></i>
+
+                                <!-- Step 2 -->
+                                <div class="w-64 bg-[#0077CC] p-8 rounded-2xl shadow-xl shadow-blue-200 text-center relative scale-110 z-10">
+                                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-slate-900 px-4 py-1 rounded-full text-xs font-bold shadow-sm">THE ENGINE</div>
+                                    <div class="bg-white/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-sm">
+                                        <i data-lucide="cpu" class="w-8 h-8 text-white"></i>
+                                    </div>
+                                    <h3 class="font-bold text-white text-lg">The Bot</h3>
+                                    <p class="text-xs text-blue-100 mt-2">Ingests CSVs & Best Practices</p>
+                                </div>
+
+                                <i data-lucide="arrow-right" class="w-8 h-8 text-slate-400"></i>
+
+                                <!-- Step 3 -->
+                                <div class="w-64 bg-white p-8 rounded-2xl shadow-md border border-slate-200 text-center relative group hover:-translate-y-1 transition duration-300">
+                                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-100 text-slate-500 px-4 py-1 rounded-full text-xs font-bold border border-slate-200">OUTPUT</div>
+                                    <div class="bg-green-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-green-100 transition">
+                                        <i data-lucide="file-check" class="w-8 h-8 text-green-600"></i>
+                                    </div>
+                                    <h3 class="font-bold text-slate-800 text-lg">90% Draft</h3>
+                                    <p class="text-xs text-slate-500 mt-2 font-mono">Sequence Generated</p>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-16 text-center max-w-2xl mx-auto">
+                                <p class="text-slate-400 italic font-serif text-lg">"It is NOT an auto-responder. It is a force multiplier that serves a customized draft on a silver platter."</p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'architecture':
+                    html = `
+                         <div class="h-full flex flex-col px-8 py-8 fade-in max-w-7xl mx-auto w-full justify-center">
+                            <div class="mb-4 text-center">
+                                <h2 class="text-4xl font-bold text-slate-900">The "How": DIKW Architecture</h2>
+                                <p class="text-slate-500 text-lg">Distributed Intelligence > One Giant Prompt</p>
+                            </div>
+                            
+                            <div class="flex-grow flex items-center justify-center">
+                                <div class="w-full max-w-3xl flex flex-col gap-3">
+                                    
+                                    <!-- Wisdom -->
+                                    <div class="bg-green-600 hover:bg-green-500 transition cursor-pointer p-5 rounded-xl shadow-lg text-white flex justify-between items-center group">
+                                        <div>
+                                            <h3 class="font-bold text-xl">WISDOM (Synthesis)</h3>
+                                            <p class="text-sm text-green-100 mt-1">Final assembly of the sequence (The "Madlib" completion).</p>
+                                        </div>
+                                        <i data-lucide="sparkles" class="w-8 h-8 opacity-50 group-hover:opacity-100 transition"></i>
+                                    </div>
+                                    
+                                    <!-- Knowledge -->
+                                    <div class="bg-amber-500 hover:bg-amber-400 transition cursor-pointer p-6 rounded-xl shadow-lg text-white flex justify-between items-center mx-6 group">
+                                        <div>
+                                            <h3 class="font-bold text-xl">KNOWLEDGE (RAG)</h3>
+                                            <p class="text-sm text-amber-100 mt-1">Ingests <code>customer_success_stories.csv</code> & <code>persona_mapper.csv</code>.</p>
+                                        </div>
+                                        <i data-lucide="book-open" class="w-8 h-8 opacity-50 group-hover:opacity-100 transition"></i>
+                                    </div>
+
+                                    <!-- Information -->
+                                    <div class="bg-purple-600 hover:bg-purple-500 transition cursor-pointer p-8 rounded-xl shadow-lg text-white flex justify-between items-center mx-12 group">
+                                        <div>
+                                            <h3 class="font-bold text-xl">INFORMATION (SLMs)</h3>
+                                            <p class="text-sm text-purple-100 mt-1">Specialized Agents processing chunks (Intent Bot, Account Bot).</p>
+                                        </div>
+                                        <i data-lucide="cpu" class="w-8 h-8 opacity-50 group-hover:opacity-100 transition"></i>
+                                    </div>
+
+                                    <!-- Data -->
+                                    <div class="bg-[#0077CC] hover:bg-blue-500 transition cursor-pointer p-10 rounded-xl shadow-lg text-white flex justify-between items-center mx-20 group">
+                                        <div>
+                                            <h3 class="font-bold text-xl">DATA (Raw Source)</h3>
+                                            <p class="text-sm text-blue-100 mt-1">Sumble, Demandbase, TechTarget, Sales Navigator, SFDC.</p>
+                                        </div>
+                                        <i data-lucide="database" class="w-8 h-8 opacity-50 group-hover:opacity-100 transition"></i>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
+                
+                case 'madlib':
+                    html = `
+                         <div class="h-full flex flex-col px-8 py-8 fade-in max-w-7xl mx-auto w-full justify-center">
+                            <div class="mb-12 text-center">
+                                <h2 class="text-4xl font-bold text-slate-900">The "Madlib" Engine</h2>
+                                <p class="text-slate-500 text-xl">Structure by Elastic. Context by AI. Grounded in Reality.</p>
+                            </div>
+
+                            <div class="bg-white p-10 rounded-2xl shadow-xl border border-slate-200 font-mono text-sm leading-relaxed max-w-4xl mx-auto w-full relative">
+                                <div class="absolute -top-3 left-8 bg-slate-800 text-white px-3 py-1 text-xs rounded uppercase tracking-wider font-bold">Generated Draft Preview</div>
+                                
+                                <p class="mb-8">Hi <span class="bg-slate-100 px-2 py-1 rounded text-slate-500 border border-slate-300">[First Name]</span>,</p>
+                                
+                                <p class="mb-8 leading-loose">
+                                    I noticed your team is researching 
+                                    <span class="bg-blue-100 px-2 py-1 rounded text-blue-700 border border-blue-300 font-bold mx-1">
+                                        <i data-lucide="zap" class="w-3 h-3 inline"></i> Sumble Topic
+                                    </span>
+                                    . Typically, 
+                                    <span class="bg-slate-100 px-2 py-1 rounded text-slate-500 border border-slate-300">[Title]</span>s 
+                                    in your industry struggle with...
+                                </p>
+
+                                <div class="mb-8 p-4 bg-red-50 rounded-lg border border-red-200 flex gap-4 items-center">
+                                    <div class="bg-red-100 p-2 rounded text-red-600"><i data-lucide="target" class="w-5 h-5"></i></div>
+                                    <div>
+                                        <span class="text-[10px] font-bold text-red-400 uppercase tracking-widest block mb-1">From Persona Mapper CSV</span>
+                                        <p class="font-bold text-slate-800 text-base">"[Specific Pain Point: Alert Fatigue & False Positives]"</p>
+                                    </div>
+                                </div>
+
+                                <p class="mb-8">We helped...</p>
+
+                                <div class="mb-8 p-4 bg-green-50 rounded-lg border border-green-200 flex gap-4 items-center">
+                                    <div class="bg-green-100 p-2 rounded text-green-600"><i data-lucide="message-square-quote" class="w-5 h-5"></i></div>
+                                    <div>
+                                        <span class="text-[10px] font-bold text-green-500 uppercase tracking-widest block mb-1">From Success Stories CSV</span>
+                                        <p class="font-bold text-slate-800 text-base">"[Company: BMW] reduce [Metric: False Positives by 95%]"</p>
+                                    </div>
+                                </div>
+
+                                <p class="mb-6">
+                                    Worth a chat? Here is a link to our 
+                                    <span class="bg-amber-100 px-2 py-1 rounded text-amber-700 border border-amber-300 font-bold mx-1">
+                                        <i data-lucide="link" class="w-3 h-3 inline"></i> Resource Mapper Link
+                                    </span>.
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'impact':
+                    html = `
+                        <div class="h-full flex flex-col px-8 py-8 fade-in max-w-7xl mx-auto w-full justify-center">
+                            <div class="mb-16 text-center">
+                                <h2 class="text-4xl font-bold text-slate-900">Strategic Alignment & ROI</h2>
+                                <p class="text-slate-500 text-xl">Why this matters now.</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                                    <div class="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
+                                        <i data-lucide="zap" class="w-8 h-8 text-[#0077CC]"></i>
+                                    </div>
+                                    <h3 class="font-bold text-xl mb-3">Speed to Lead</h3>
+                                    <p class="text-slate-500 leading-relaxed">Instant analysis means the first high-quality email goes out in minutes, not hours.</p>
+                                </div>
+                                
+                                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                                    <div class="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-6">
+                                        <i data-lucide="bar-chart-3" class="w-8 h-8 text-purple-600"></i>
+                                    </div>
+                                    <h3 class="font-bold text-xl mb-3">Pipeline Gen</h3>
+                                    <p class="text-slate-500 leading-relaxed">Higher relevance = Higher conversion rates. We stop burning leads with generic templates.</p>
+                                </div>
+
+                                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                                    <div class="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center mb-6">
+                                        <i data-lucide="database" class="w-8 h-8 text-amber-600"></i>
+                                    </div>
+                                    <h3 class="font-bold text-xl mb-3">Tooling ROI</h3>
+                                    <p class="text-slate-500 leading-relaxed">Maximizing the value of our investments in Sumble, Demandbase, and TechTarget.</p>
+                                </div>
+                            </div>
+
+                            <div class="text-center">
+                                <button onclick="nextSlide()" class="bg-[#0077CC] hover:bg-blue-600 text-white font-bold text-xl px-12 py-5 rounded-full shadow-xl hover:shadow-2xl transition transform hover:-translate-y-1 flex items-center gap-3 mx-auto">
+                                    <i data-lucide="play-circle" class="w-6 h-6"></i> Launch Live Simulator
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    break;
+
+                case 'simulator':
+                    renderSimulator(container);
+                    return; // Simulator renders itself
+            }
+
+            container.innerHTML = html;
+            lucide.createIcons();
+            
+            // Post-render Chart Logic
+            if (slideId === 'problem') {
+                const ctx = document.getElementById('problemChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Research / Admin', 'Selling Activities'],
+                        datasets: [{
+                            data: [60, 40],
+                            backgroundColor: ['#ef4444', '#22c55e'], // Red, Green
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '60%',
+                        plugins: { 
+                            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } 
+                        }
+                    }
+                });
+            }
+        }
+
+        function renderSimulator(container) {
+            container.innerHTML = `
+                <div class="flex h-full w-full bg-slate-100 overflow-hidden fade-in">
+                    <!-- Sidebar: Queue -->
+                    <div class="w-96 bg-white border-r border-slate-200 flex flex-col z-10 shadow-xl">
+                        <div class="p-6 border-b border-slate-100 bg-slate-50">
+                            <h3 class="font-bold text-slate-700 flex items-center gap-2 text-lg">
+                                <i data-lucide="inbox" class="w-5 h-5"></i> Inbound Queue
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-1">Live Feed from Salesforce</p>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar" id="lead-list">
+                            ${MOCK_LEADS.map(lead => `
+                                <div onclick="selectLead(${lead.id})" 
+                                     id="lead-${lead.id}"
+                                     class="p-5 rounded-xl cursor-pointer border transition hover:shadow-lg relative group ${state.simulator.selectedLeadId === lead.id ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'bg-white border-slate-200 hover:border-blue-300'}">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h4 class="font-bold text-sm text-slate-800">${lead.name}</h4>
+                                        <span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold shadow-sm">${lead.intentScore} Intent</span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 mb-3">${lead.title} @ ${lead.company}</p>
+                                    <div class="flex items-center gap-2 text-[10px] text-slate-400 bg-slate-50 p-2 rounded">
+                                        <i data-lucide="zap" class="w-3 h-3 text-amber-500"></i> ${lead.source}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Main Area -->
+                    <div class="flex-1 flex flex-col bg-slate-50 relative">
+                        
+                        <!-- Empty State -->
+                        <div id="sim-empty" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 ${state.simulator.selectedLeadId ? 'hidden' : ''}">
+                            <div class="bg-white p-6 rounded-full shadow-sm mb-4">
+                                <i data-lucide="mouse-pointer-click" class="w-12 h-12 text-slate-300"></i>
+                            </div>
+                            <p class="text-lg font-medium">Select a lead to begin analysis</p>
+                            <p class="text-sm mt-2 opacity-75">The bot is ready to architect.</p>
+                        </div>
+
+                        <!-- Content (Hidden until selected) -->
+                        <div id="sim-content" class="flex flex-col h-full ${!state.simulator.selectedLeadId ? 'hidden' : ''}">
+                            
+                            <!-- Progress Bar -->
+                            <div class="h-20 bg-white border-b border-slate-200 px-12 flex items-center justify-between shadow-sm z-10">
+                                <div class="flex items-center w-full gap-6">
+                                    ${['DATA', 'INFO', 'KNOWLEDGE', 'WISDOM'].map((step, idx) => `
+                                        <div class="flex flex-col items-center gap-1 transition-colors duration-300 relative" id="step-label-${idx}">
+                                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 z-10 bg-white" id="step-icon-${idx}">
+                                                ${idx + 1}
+                                            </div>
+                                            <span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">${step}</span>
+                                        </div>
+                                        ${idx < 3 ? `<div class="h-1 flex-1 bg-slate-100 rounded overflow-hidden -mt-5 mx-2"><div class="h-full bg-blue-500 w-0 progress-bar-fill" id="bar-${idx}"></div></div>` : ''}
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <!-- Work Area -->
+                            <div class="flex-1 p-10 overflow-y-auto relative bg-slate-50/50">
+                                <!-- Log Output -->
+                                <div id="process-logs" class="font-mono text-xs space-y-3 mb-8 text-slate-500 max-w-3xl mx-auto"></div>
+
+                                <!-- Result Editor -->
+                                <div id="result-editor" class="bg-white rounded-xl shadow-xl border border-slate-200 p-8 opacity-0 transition-opacity duration-500 hidden transform translate-y-4 max-w-3xl mx-auto mb-20">
+                                    <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-6">
+                                        <div class="flex items-center gap-4">
+                                            <div class="bg-green-100 text-green-600 p-3 rounded-lg shadow-inner">
+                                                <i data-lucide="check-circle-2" class="w-6 h-6"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="font-bold text-slate-900 text-lg">Sequence Draft Ready</h3>
+                                                <p class="text-xs text-slate-500 mt-1">Full 5-Step Sequence (Ara Methodology)</p>
+                                            </div>
+                                        </div>
+                                        <button class="bg-[#0077CC] hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 transition">
+                                            <i data-lucide="send" class="w-4 h-4"></i> Push to Outreach
+                                        </button>
+                                    </div>
+
+                                    <div id="sequence-container" class="space-y-6">
+                                        <!-- Sequence Steps Injected Here -->
+                                    </div>
+                                    
+                                    <div class="mt-6 flex gap-3 text-xs text-slate-500 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                        <i data-lucide="sparkles" class="w-4 h-4 text-blue-500"></i>
+                                        <span><strong>Sources Used:</strong> Persona Mapper v3, Success Stories Q1 (BMW/Comcast), Elastic Blog.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            
+            if(state.simulator.selectedLeadId && state.simulator.generatedSequence) {
+                document.getElementById('sim-content').classList.remove('hidden');
+                document.getElementById('sim-empty').classList.add('hidden');
+                showFinalResult(state.simulator.generatedSequence);
+            }
+        }
+
+        // --- Logic ---
+
+        function updateNav() {
+            const dots = document.getElementById('nav-dots');
+            dots.innerHTML = state.slides.map((_, idx) => `
+                <div class="w-2.5 h-2.5 rounded-full transition-all duration-300 ${idx === state.currentSlide ? 'bg-[#0077CC] w-6' : 'bg-slate-300'}"></div>
+            `).join('');
+
+            document.getElementById('btn-prev').disabled = state.currentSlide === 0;
+            const nextBtn = document.getElementById('btn-next');
+            if (state.currentSlide === state.slides.length - 1) {
+                nextBtn.innerHTML = `Finish <i data-lucide="check" class="w-4 h-4"></i>`;
+                nextBtn.classList.add('bg-green-600', 'hover:bg-green-500');
+                nextBtn.onclick = () => alert("End of Presentation. Ready for Q&A.");
+            } else {
+                nextBtn.innerHTML = `Next <i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+                nextBtn.classList.remove('bg-green-600', 'hover:bg-green-500');
+                nextBtn.classList.add('bg-slate-900');
+                nextBtn.onclick = nextSlide;
+            }
+            lucide.createIcons();
+        }
+
+        function nextSlide() {
+            if (state.currentSlide < state.slides.length - 1) {
+                state.currentSlide++;
+                renderSlide();
+                updateNav();
+            }
+        }
+
+        function prevSlide() {
+            if (state.currentSlide > 0) {
+                state.currentSlide--;
+                renderSlide();
+                updateNav();
+            }
+        }
+
+        // --- Simulator Logic ---
+
+        function selectLead(id) {
+            state.simulator.selectedLeadId = id;
+            state.simulator.step = 0;
+            renderSimulator(document.getElementById('app-container')); 
+            
+            const lead = MOCK_LEADS.find(l => l.id === id);
+            runAnalysis(lead);
+        }
+
+        function runAnalysis(lead) {
+            const logs = document.getElementById('process-logs');
+            const editor = document.getElementById('result-editor');
+            
+            // Reset UI
+            logs.innerHTML = '';
+            editor.classList.add('hidden');
+            [0,1,2].forEach(i => document.getElementById(`bar-${i}`).style.width = '0%');
+            [0,1,2,3].forEach(i => {
+                const icon = document.getElementById(`step-icon-${i}`);
+                const label = document.getElementById(`step-label-${i}`);
+                icon.className = "w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 bg-white border-slate-200 text-slate-300";
+                label.className = "flex flex-col items-center gap-1 transition-colors duration-300 text-slate-300 relative";
+            });
+
+            // Helper to update progress
+            const activateStep = (idx, colorClass, borderClass, textClass) => {
+                const icon = document.getElementById(`step-icon-${idx}`);
+                const label = document.getElementById(`step-label-${idx}`);
+                icon.className = `w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 bg-white ${borderClass} ${textClass} shadow-lg scale-110`;
+                label.querySelector('span').className = `text-[10px] font-bold tracking-wider uppercase ${textClass}`;
+                if (idx > 0) document.getElementById(`bar-${idx-1}`).style.width = '100%';
+            };
+
+            const addLog = (text, color = "text-slate-500") => {
+                const div = document.createElement('div');
+                div.className = `${color} opacity-0 transform translate-x-4 transition-all duration-300 flex items-center gap-2 bg-white p-2 rounded shadow-sm border border-slate-100`;
+                div.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${color.replace('text-', 'bg-')}"></span> ${text}`;
+                logs.appendChild(div);
+                requestAnimationFrame(() => {
+                    div.classList.remove('opacity-0', 'translate-x-4');
+                });
+                logs.scrollTop = logs.scrollHeight;
+            };
+
+            // Sequence
+            setTimeout(() => {
+                activateStep(0, "bg-blue-500", "border-blue-500", "text-blue-600");
+                addLog(`[DATA] Ingesting intent from ${lead.source}...`, "text-blue-600");
+                addLog(`[DATA] Detected Topics: ${lead.intentTopics.join(", ")}`);
+            }, 500);
+
+            setTimeout(() => {
+                activateStep(1, "bg-purple-500", "border-purple-500", "text-purple-600");
+                addLog(`[INFO] Mapping Persona: ${lead.title} -> ${lead.persona}`, "text-purple-600");
+                addLog(`[INFO] Pain Point Identified: "${lead.pain}"`);
+            }, 1500);
+
+            setTimeout(() => {
+                activateStep(2, "bg-amber-500", "border-amber-500", "text-amber-600");
+                addLog(`[KNOWLEDGE] Querying 'Customer Success Stories.csv'...`, "text-amber-600");
+                addLog(`[KNOWLEDGE] Match Found: ${lead.story_match.company} (${lead.story_match.metric})`);
+            }, 3000);
+
+            setTimeout(() => {
+                activateStep(3, "bg-green-500", "border-green-500", "text-green-600");
+                addLog(`[WISDOM] Synthesizing 5-Step Sequence (Ara Methodology)...`, "text-green-600");
+                addLog(`[STYLE] Applying 'Helpful & Curious' Tone...`);
+            }, 4500);
+
+            setTimeout(() => {
+                // Generate Content
+                const sequence = generateSequence(lead);
+                state.simulator.generatedSequence = sequence;
+                showFinalResult(sequence);
+            }, 5500);
+        }
+
+        function showFinalResult(sequence) {
+            const editor = document.getElementById('result-editor');
+            const container = document.getElementById('sequence-container');
+            
+            container.innerHTML = sequence.map((email, idx) => `
+                <div class="border border-slate-200 rounded-lg overflow-hidden">
+                    <div class="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">${email.day}: ${email.type}</span>
+                        <div class="flex gap-2">
+                             <span class="text-[10px] bg-white border border-slate-200 px-2 rounded text-slate-400">Draft</span>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-white space-y-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Subject</label>
+                            <input type="text" value="${email.subject}" class="w-full bg-white border-b border-slate-100 text-sm font-medium text-slate-800 focus:border-blue-500 focus:bg-slate-50 transition px-2 py-1">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Body</label>
+                            <textarea rows="${Math.max(4, email.body.split('\n').length)}" class="w-full bg-white text-sm text-slate-700 font-sans leading-relaxed focus:bg-slate-50 transition px-2 py-1 resize-none">${email.body}</textarea>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            editor.classList.remove('hidden');
+            editor.classList.remove('translate-y-4'); // Slide up effect
+            editor.classList.remove('opacity-0');
+        }
+
+        // --- Initialization ---
+        renderSlide();
+        updateNav();
+
+    </script>
+</body>
+</html>
